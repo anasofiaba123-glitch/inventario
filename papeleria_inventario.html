@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Papelería Mi Barrio</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+      color: #333;
+      transition: all 0.3s;
+    }
+    header { background: #0066cc; color: white; padding: 15px; text-align: center; }
+    nav { display: flex; justify-content: center; background: #ddd; }
+    nav button {
+      background: none; border: none; padding: 15px; cursor: pointer; font-size: 16px;
+    }
+    nav button:hover { background: #bbb; }
+    section { display: none; padding: 20px; }
+    section.active { display: block; }
+    .productos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+    }
+    .producto {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      background: white;
+    }
+    .producto img { max-width: 100%; height: 120px; object-fit: contain; }
+    .hidden { display: none; }
+    .admin-form input {
+      display: block;
+      margin-bottom: 10px;
+      padding: 6px;
+      width: 100%;
+    }
+    .reset-btn {
+      margin-top: 10px;
+      background: #cc0000;
+      color: white;
+      padding: 8px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="siteTitle">Papelería Mi Barrio</h1>
+  </header>
+
+  <nav>
+    <button onclick="showSection('inicio')">Inicio</button>
+    <button onclick="showSection('productos')">Productos</button>
+    <button onclick="showSection('admin')">Modo Dueño</button>
+  </nav>
+
+  <!-- INICIO -->
+  <section id="inicio" class="active">
+    <h2>Bienvenido</h2>
+    <p>Aquí puedes ver nuestros productos disponibles:</p>
+    <div id="productosPreview" class="productos-grid"></div>
+  </section>
+
+  <!-- PRODUCTOS -->
+  <section id="productos">
+    <h2>Productos disponibles</h2>
+    <div id="productosList" class="productos-grid"></div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="admin">
+    <h2>Panel del Dueño</h2>
+    <div id="adminLogin">
+      <p>Introduce la contraseña:</p>
+      <input type="password" id="adminPass">
+      <button onclick="checkAdmin()">Entrar</button>
+    </div>
+
+    <div id="adminPanel" class="hidden">
+      <h3>Gestión de productos</h3>
+      <form id="productForm" class="admin-form">
+        <input type="text" id="prodName" placeholder="Nombre del producto" required>
+        <input type="number" id="prodPrice" placeholder="Precio" required>
+        <input type="number" id="prodQty" placeholder="Cantidad disponible" required>
+        <input type="file" id="prodImage" accept="image/*" required>
+        <button type="submit">Agregar producto</button>
+      </form>
+      <div id="adminProducts" class="productos-grid"></div>
+
+      <h3>Personalizar apariencia</h3>
+      <label>Color principal:
+        <input type="color" id="colorPicker">
+      </label>
+      <label>Tipografía:
+        <select id="fontSelect">
+          <option value="Arial">Arial</option>
+          <option value="Verdana">Verdana</option>
+          <option value="Georgia">Georgia</option>
+        </select>
+      </label>
+      <label>Tamaño de texto base:
+        <input type="number" id="fontSize" min="12" max="32" value="16"> px
+      </label>
+      <button onclick="applyAppearance()">Aplicar cambios</button>
+      <button class="reset-btn" onclick="resetAppearance()">Restaurar apariencia</button>
+    </div>
+  </section>
+
+  <script>
+    // ====== Navegación ======
+    function showSection(id) {
+      document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    }
+
+    // ====== Admin login ======
+    const ADMIN_PASSWORD = "1234"; // cambiar aquí
+    function checkAdmin() {
+      let pass = document.getElementById("adminPass").value;
+      if (pass === ADMIN_PASSWORD) {
+        document.getElementById("adminLogin").classList.add("hidden");
+        document.getElementById("adminPanel").classList.remove("hidden");
+      } else {
+        alert("Contraseña incorrecta");
+      }
+    }
+
+    // ====== Productos ======
+    let productos = JSON.parse(localStorage.getItem("productos")) || [];
+
+    function renderProductos() {
+      const productosList = document.getElementById("productosList");
+      const productosPreview = document.getElementById("productosPreview");
+      const adminProducts = document.getElementById("adminProducts");
+
+      productosList.innerHTML = "";
+      productosPreview.innerHTML = "";
+      adminProducts.innerHTML = "";
+
+      productos.forEach((p, i) => {
+        let card = `
+          <div class="producto">
+            <img src="${p.image}" alt="${p.name}">
+            <h4>${p.name}</h4>
+            <p>Precio: $${p.price}</p>
+            <p>Disponible: ${p.qty}</p>
+          </div>
+        `;
+        productosList.innerHTML += card;
+        productosPreview.innerHTML += card;
+
+        let adminCard = `
+          <div class="producto">
+            <img src="${p.image}" alt="${p.name}">
+            <h4>${p.name}</h4>
+            <p>$${p.price} | Cant: ${p.qty}</p>
+            <button onclick="deleteProducto(${i})">Eliminar</button>
+          </div>
+        `;
+        adminProducts.innerHTML += adminCard;
+      });
+    }
+
+    function deleteProducto(index) {
+      productos.splice(index, 1);
+      localStorage.setItem("productos", JSON.stringify(productos));
+      renderProductos();
+    }
+
+    document.getElementById("productForm").addEventListener("submit", e => {
+      e.preventDefault();
+      let name = document.getElementById("prodName").value;
+      let price = document.getElementById("prodPrice").value;
+      let qty = document.getElementById("prodQty").value;
+      let file = document.getElementById("prodImage").files[0];
+
+      let reader = new FileReader();
+      reader.onload = function(evt) {
+        productos.push({ name, price, qty, image: evt.target.result });
+        localStorage.setItem("productos", JSON.stringify(productos));
+        renderProductos();
+        e.target.reset();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // ====== Apariencia ======
+    function applyAppearance() {
+      let color = document.getElementById("colorPicker").value;
+      let font = document.getElementById("fontSelect").value;
+      let size = document.getElementById("fontSize").value + "px";
+
+      let settings = { color, font, size };
+      localStorage.setItem("apariencia", JSON.stringify(settings));
+      applySettings(settings);
+    }
+
+    function applySettings(settings) {
+      if (!settings) return;
+      document.body.style.color = settings.color;
+      document.body.style.fontFamily = settings.font;
+      document.body.style.fontSize = settings.size;
+    }
+
+    function resetAppearance() {
+      localStorage.removeItem("apariencia");
+      location.reload();
+    }
+
+    // ====== Inicialización ======
+    renderProductos();
+    applySettings(JSON.parse(localStorage.getItem("apariencia")));
+  </script>
+</body>
+</html>
